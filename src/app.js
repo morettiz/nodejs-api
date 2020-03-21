@@ -1,7 +1,9 @@
 const express = require('express');
+const path = require('path');
 
 const routes = require('./routes');
-const database = require('./database');
+
+require('./database');
 
 class App {
     constructor() {
@@ -13,6 +15,7 @@ class App {
 
     middlewares() {
         this.server.use(express.json());
+        this.server.use('/files', express.static(path.resolve(__dirname, '..', 'tmp', 'uploads')));
     }
 
     routes() {
