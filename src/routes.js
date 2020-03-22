@@ -8,6 +8,7 @@ const ProviderController = require('./app/controllers/ProviderController');
 const AppointmentController = require('./app/controllers/AppointmentController');
 const ScheduleController = require('./app/controllers/ScheduleController');
 const NotificationController = require('./app/controllers/NotificationController');
+const AvailableController = require('./app/controllers/AvailableController');
 const authMiddleware = require('./app/middlewares/auth');
 const multerConfig = require('./config/multer');
 
@@ -22,6 +23,7 @@ routes.post('/sessions', SessionController.store);
 
 routes.use(authMiddleware);
 
+routes.get('/providers/:providerId/available', AvailableController.index);
 routes.get('/providers', authMiddleware, ProviderController.index);
 
 routes.get('/appointments', AppointmentController.index);
