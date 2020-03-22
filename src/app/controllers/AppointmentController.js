@@ -1,11 +1,13 @@
 const Yup = require('yup');
-const { startOfHour, parseISO, isBefore, format } = require('date-fns');
+const { startOfHour, parseISO, isBefore, format, subHours } = require('date-fns');
 const pt = require('date-fns/locale/pt');
 
 const Appointment = require('../models/Appointment');
 const Notification = require('../schemas/Notification');
 const User = require('../models/User');
 const File = require('../models/File');
+const Queue = require('../../lib/Queue');
+const CancelationMail = require('../jobs/CancelationMail');
 
 class AppointmentController {
     async store(req, res) {
@@ -83,6 +85,43 @@ class AppointmentController {
         });
 
         return res.json(appointments);
+    }
+
+    async delete(req, res) {
+        const appointment = await Appointment.findByPk(req.params.id, {
+            include: [
+                {
+                    model: User,
+                    as: 'provider',
+                    attributes: ['name', 'email'],
+                },
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['name'],
+                }
+            ]
+        });
+
+        if (appointment.user_id != req.userId) {
+            return res.status(401).json({ error: 'You are not the owner of this appointment.' });
+        }
+
+        const dateWithSub = subHours(appointment.date, 2);
+
+        if (isBefore(dateWithSub, new Date())) {
+            return res.status(401).json({ error: 'Appointments can only be canceled with 2 hours in advance.' });
+        }
+
+        appointment.canceled_at = new Date();
+
+        await appointment.save();
+
+        await Queue.add(CancelationMail.key, {
+            appointment,
+        });
+
+        return res.json(appointment);
     }
 }
 
